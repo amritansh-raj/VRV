@@ -1,0 +1,8 @@
+changed() {
+    git diff --name-only HEAD@{1} HEAD | grep "^$1" >/dev/null 2>&1
+}
+
+if changed "package.json"; then
+    echo "📦 package.json changed. Running bun install for updating packages."
+    bun install
+fi

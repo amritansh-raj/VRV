@@ -1,0 +1,2 @@
+bun commitlint --edit
+bun run build

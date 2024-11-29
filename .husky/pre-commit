@@ -1,0 +1,4 @@
+bun lint
+npx lint-staged
+bun run format
+sudo chown -R $(whoami) .

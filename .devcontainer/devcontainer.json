@@ -1,0 +1,41 @@
+{
+  "name": "VRV",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20",
+  "runArgs": [
+    "--name",
+    "VRV"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "prettier.bracketSpacing": false,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll": true,
+          "source.organizeImports": true
+        }
+      },
+      "extensions": [
+        "PKief.material-icon-theme",
+        "dbaeumer.vscode-eslint",
+        "dsznajder.es7-react-js-snippets",
+        "xabikos.JavaScriptSnippets",
+        "skyran.js-jsx-snippets",
+        "esbenp.prettier-vscode",
+        "YoavBls.pretty-ts-errors",
+        "bradlc.vscode-tailwindcss",
+        "pmneo.tsimporter",
+        "formulahendry.auto-rename-tag"
+      ]
+    }
+  },
+  "features": {
+    "git": "latest"
+  },
+  "forwardPorts": [
+    4000,
+    5000
+  ],
+  "postCreateCommand": "sh .devcontainer/postCreateCommand.sh"
+}
