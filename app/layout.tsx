@@ -1,3 +1,4 @@
+import DefaultLayout from '@/components/Layouts/DefaultLayout';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
@@ -28,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <DefaultLayout>{children}</DefaultLayout>
       </body>
     </html>
   );

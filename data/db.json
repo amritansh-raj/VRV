@@ -1,29 +1,52 @@
 {
-  "posts": [
+  "users": [
     {
-      "id": "1",
-      "title": "a title",
-      "views": 100
+      "id": "1asdsa",
+      "name": "Admin",
+      "email": "admin@gmail.com",
+      "password": "admin@123",
+      "role": "admin",
+      "status": "active"
     },
     {
-      "id": "2",
-      "title": "another title",
-      "views": 200
-    }
-  ],
-  "comments": [
-    {
-      "id": "1",
-      "text": "a comment about post 1",
-      "postId": "1"
+      "id": "0b7e",
+      "name": "dasdas",
+      "email": "student3@gmail.com",
+      "password": "abcdefgh",
+      "role": "user",
+      "status": "active",
+      "permissions": {
+        "add": false,
+        "delete": true,
+        "update": false
+      }
     },
     {
-      "id": "2",
-      "text": "another comment about post 1",
-      "postId": "1"
+      "id": "9207",
+      "name": "Manager",
+      "email": "manager@gmail.com",
+      "password": "manager@123",
+      "role": "manager",
+      "status": "active"
     }
   ],
-  "profile": {
-    "name": "typicode"
-  }
+  "tasks": [
+    {
+      "id": "0b7adsa",
+      "title": "Task 2",
+      "description": "Another task for user 1",
+      "completed": false,
+      "deleted": false,
+      "userId": "0b7e",
+      "body": "{\"deleted\":false}"
+    },
+    {
+      "id": "asdas",
+      "title": "Task 2",
+      "description": "Another task for user 1",
+      "completed": false,
+      "deleted": false,
+      "userId": "0b7e"
+    }
+  ]
 }
