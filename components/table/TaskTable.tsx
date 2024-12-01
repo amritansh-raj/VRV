@@ -18,6 +18,16 @@ import { client } from '@/services/axios';
 import useAuthStore from '@/store/userStore';
 import { Check, Plus, Trash, Undo, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 interface Permission {
   add: boolean;
@@ -33,13 +43,16 @@ interface User {
   permissions: Permission;
 }
 
-interface Task {
-  id: string;
+interface NewTaskI {
   title: string;
   description: string;
   completed: boolean;
   deleted: boolean;
   userId: string | undefined;
+}
+
+export interface Task extends NewTaskI {
+  id: string;
 }
 
 const fetchTasksForUser = async (userId: string): Promise<Task[]> => {
@@ -66,6 +79,8 @@ export default function TaskTable() {
   const [editedDescription, setEditedDescription] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const User = useAuthStore((state) => state.user);
@@ -82,28 +97,40 @@ export default function TaskTable() {
   }, []);
 
   const toggleTaskCompletion = async (taskId: string) => {
-    if (!user?.permissions.add) {
+    if (!user?.permissions.update) {
       toast({
         variant: 'destructive',
-        description: "You don't have add permission !!",
+        description: "You don't have update permission !!",
       });
       return;
     }
-    const updatedTasks = tasks.map((task) =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task,
-    );
-    setTasks(updatedTasks);
 
     const task = tasks.find((task) => task.id === taskId);
     if (task) {
-      await updateTask(taskId, { completed: !task.completed });
+      const updatedTask = { ...task, completed: !task.completed };
+
+      try {
+        const response = await client.patch(`${ENDPOINTS.TASKS}/${taskId}`, {
+          completed: updatedTask.completed,
+        });
+
+        if (response.status === 200) {
+          const updatedTasks = tasks.map((t) =>
+            t.id === taskId ? response.data : t,
+          );
+          setTasks(updatedTasks);
+        }
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          description: 'Failed to toggle task completion.',
+        });
+      }
     }
   };
 
-  const toggleTaskDeletion = async (taskId: string) => {
+  const toggleTaskDeleted = async (taskId: string) => {
     if (!user?.permissions.delete) {
-      console.log('first');
-
       toast({
         variant: 'destructive',
         description: "You don't have delete permission !!",
@@ -111,14 +138,62 @@ export default function TaskTable() {
       });
       return;
     }
-    const updatedTasks = tasks.map((task) =>
-      task.id === taskId ? { ...task, deleted: !task.deleted } : task,
-    );
-    setTasks(updatedTasks);
 
     const task = tasks.find((task) => task.id === taskId);
     if (task) {
-      await updateTask(taskId, { deleted: !task.deleted });
+      try {
+        const response = await client.patch(`${ENDPOINTS.TASKS}/${taskId}`, {
+          deleted: !task.deleted,
+        });
+
+        if (response.status === 200) {
+          const updatedTasks = tasks.map((t) =>
+            t.id === taskId ? { ...t, deleted: !task.deleted } : t,
+          );
+          setTasks(updatedTasks);
+          toast({
+            description: `Task marked as ${
+              !task.deleted ? 'deleted' : 'active'
+            }.`,
+          });
+        }
+      } catch (error) {
+        console.error('Error toggling task deletion:', error);
+        toast({
+          variant: 'destructive',
+          description: 'Failed to toggle the task deletion status.',
+        });
+      }
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (!user?.permissions.delete) {
+      toast({
+        variant: 'destructive',
+        description: "You don't have delete permission !!",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const response = await client.delete(`${ENDPOINTS.TASKS}/${taskId}`);
+
+      if (response.status === 200 || response.status === 204) {
+        const updatedTasks = tasks.filter((task) => task.id !== taskId);
+        setTasks(updatedTasks);
+        toast({
+          description: 'Task permanently deleted.',
+        });
+        setTaskToDelete(null);
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        variant: 'destructive',
+        description: 'Failed to delete the task.',
+      });
     }
   };
 
@@ -130,6 +205,7 @@ export default function TaskTable() {
       });
       return;
     }
+
     setEditingTask(task.id);
     setEditedTitle(task.title);
     setEditedDescription(task.description);
@@ -143,20 +219,35 @@ export default function TaskTable() {
       });
       return;
     }
-    const updatedTasks = tasks.map((task) =>
-      task.id === taskId
-        ? { ...task, title: editedTitle, description: editedDescription }
-        : task,
-    );
-    setTasks(updatedTasks);
 
     const task = tasks.find((task) => task.id === taskId);
     if (task) {
-      await updateTask(taskId, {
+      const updatedTask = {
+        ...task,
         title: editedTitle,
         description: editedDescription,
-      });
+      };
+
+      try {
+        const response = await client.put(`/api/tasks/${taskId}`, {
+          title: updatedTask.title,
+          description: updatedTask.description,
+        });
+
+        if (response.status === 200) {
+          const updatedTasks = tasks.map((t) =>
+            t.id === taskId ? response.data : t,
+          );
+          setTasks(updatedTasks);
+        }
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          description: 'Failed to save changes.',
+        });
+      }
     }
+
     setEditingTask(null);
   };
 
@@ -164,7 +255,7 @@ export default function TaskTable() {
     setEditingTask(null);
   };
 
-  const addNewTask = () => {
+  const addNewTask = async () => {
     if (!user?.permissions.add) {
       toast({
         variant: 'destructive',
@@ -182,8 +273,7 @@ export default function TaskTable() {
       return;
     }
 
-    const newTask: Task = {
-      id: Date.now().toString(),
+    const newTask: NewTaskI = {
       title: newTaskTitle,
       description: newTaskDescription,
       completed: false,
@@ -191,7 +281,19 @@ export default function TaskTable() {
       userId: User?.id,
     };
 
-    setTasks([...tasks, newTask]);
+    try {
+      const response = await client.post(ENDPOINTS.TASKS, newTask);
+      setTasks((prevTasks) => [...prevTasks, response.data]);
+      toast({
+        description: 'New task added successfully!',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        description: 'Failed to add the new task. Please try again later.',
+      });
+    }
+
     setNewTaskDescription('');
     setNewTaskTitle('');
   };
@@ -293,24 +395,37 @@ export default function TaskTable() {
                       </>
                     ) : (
                       <>
-                        <Button
-                          size="sm"
-                          variant={task.completed ? 'outline' : 'default'}
-                          onClick={() => toggleTaskCompletion(task.id)}
-                          disabled={task.deleted}
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={task.deleted ? 'outline' : 'destructive'}
-                          onClick={() => toggleTaskDeletion(task.id)}
-                        >
-                          {task.deleted ? (
+                        {!task.deleted && (
+                          <Button
+                            size="sm"
+                            variant={task.completed ? 'outline' : 'default'}
+                            onClick={() => toggleTaskCompletion(task.id)}
+                            disabled={task.deleted}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {task.deleted && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => toggleTaskDeleted(task.id)}
+                          >
                             <Undo className="h-4 w-4" />
-                          ) : (
-                            <Trash className="h-4 w-4" />
-                          )}
+                          </Button>
+                        )}
+
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (task.deleted) {
+                              setTaskToDelete(task.id);
+                              setIsDeleteDialogOpen(true);
+                            } else toggleTaskDeleted(task.id);
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
                         </Button>
                       </>
                     )}
@@ -320,6 +435,35 @@ export default function TaskTable() {
             ))}
           </TableBody>
         </Table>
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                task.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setTaskToDelete(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (taskToDelete) {
+                    deleteTask(taskToDelete);
+                  }
+                  setIsDeleteDialogOpen(false);
+                }}
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
