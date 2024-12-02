@@ -1,1 +1,1 @@
-export const baseUrl = 'http://167.71.227.81:9000/';
+export const baseUrl = 'https://vrn.predine.in/';
